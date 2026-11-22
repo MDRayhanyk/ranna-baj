@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0f6b63" />
+    <title>Ranna Baj</title>
+    <style>
+      :root {
+        --bg: #faf8f4;
+        --card: #fff;
+        --ink: #1c1c1a;
+        --mut: #77756e;
+        --line: #e8e4db;
+        --teal: #0f6b63;
+        --saf: #e8a317;
+        --red: #b3261e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #161614;
+          --card: #1f1f1c;
+          --ink: #f1efe8;
+          --mut: #9b988f;
+          --line: #33322d;
+          --teal: #35b5a8;
+          --saf: #f0b73a;
+          --red: #f2877f;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 520px;
+        margin: auto;
+        padding: 16px 16px 90px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 22px 0 8px;
+        color: var(--mut);
+        font-weight: 600;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        margin: 10px 0;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+        color: inherit;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--card);
+        margin: 4px 0 12px;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 11px 16px;
+        background: var(--teal);
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.ghost {
+        background: none;
+        color: var(--teal);
+        border: 1px solid var(--line);
+      }
+      button.sm {
+        padding: 6px 10px;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+      .row > div {
+        flex: 1;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 6px 0 14px;
+      }
+      .chip {
+        border: 1px solid var(--line);
+        background: var(--card);
+        color: var(--ink);
+        padding: 9px 14px;
+        border-radius: 999px;
+      }
+      .chip.on {
+        background: var(--teal);
+        color: #fff;
+        border-color: var(--teal);
+      }
+      nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--card);
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: center;
+        gap: 2px;
+        padding: 8px;
+      }
+      nav button {
+        background: none;
+        color: var(--mut);
+        padding: 8px 11px;
+        font-size: 14px;
+        border-radius: 0;
+      }
+      nav button.on {
+        color: var(--teal);
+        box-shadow: inset 0 -2px var(--saf);
+      }
+      .mut {
+        color: var(--mut);
+        font-size: 13px;
+      }
+      .pos {
+        color: var(--teal);
+      }
+      .neg {
+        color: var(--red);
+      }
+      .err {
+        color: var(--red);
+        min-height: 20px;
+        margin-bottom: 6px;
+      }
+      .note {
+        border-left: 3px solid var(--saf);
+        padding: 4px 10px;
+        margin: 12px 0;
+        font-size: 13px;
+        color: var(--mut);
+      }
+    </style>
+  </head>
+  <body>
+    <main></main>
+    <script>
+          const URL_ = "https://oxpxnlsijafovykmomkd.supabase.co",
+            KEY =
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94cHhubHNpamFmb3Z5a21vbWtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNjA2ODgsImV4cCI6MjExMDkzNjY4OH0.l31-EtxxuzyvoQqNcmJUl2buSWwU7BM94wvenDDvLBY"; // <-- fill these two (Supabase > Project Settings > API)
+          const $ = (s) => document.querySelector(s);
+          const S = {
+            tab: "add",
+            tok: localStorage.rb_tok || "",
+            pub: null,
+            d: null,
+            err: "",
+            sel: "",
+            sp: null,
+            paid: null,
+          };
+          const esc = (s) =>
+            String(s ?? "").replace(
+              /[&<>"']/g,
+              (c) =>
+                ({
+                  "&": "&",
+                  "<": "<",
+                  ">": ">",
+                  '"': """,
+                  "'": "'",
+                }[c])
+            );
+          const c2 = (n) =>
+            (n / 100).toLocaleString("en", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            });
+          const fd = (d) =>
+            new Date(d + "T00:00").toLocaleDateString("en", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            });
+          const today = () =>
+            new Date(Date.now() - new Date().getTimezoneOffset() * 6e4)
+              .toISOString()
+              .slice(0, 10);
+          const nm = (id) =>
+            (S.d.people.find((p) => p.id === id) || { name: "?" }).name;
+          async function rpc(fn, args) {
+            const r = await fetch(URL_ + "/rest/v1/rpc/" + fn, {
+              method: "POST",
+              headers: {
+                apikey: KEY,
+                Authorization: "Bearer " + KEY,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(args || {}),
+            });
+            const j = await r.json().catch(() => null);
+            if (!r.ok) throw new Error((j && j.message) || "Network error");
+            return j;
+          }
+          function out() {
+            S.tok = "";
+            S.d = null;
+            S.sp = null;
+            S.paid = null;
+            localStorage.removeItem("rb_tok");
+            render();
+          }
+          async function load() {
+            try {
+              S.d = await rpc("data", { p_tok: S.tok });
+              S.sp = S.sp || S.d.people.filter((p) => p.active).map((p) => p.id);
+              S.paid = S.paid || S.d.me.id;
+              render();
+            } catch (e) {
+              S.err = e.message;
+              out();
+            }
+          }
+          async function init() {
+            try {
+              S.pub = await rpc("app_state");
+              if (S.tok) await load();
+              else render();
+            } catch (e) {
+              $("main").innerHTML =
+                '<p class="neg">Cannot reach the server. Check the two settings at the top of index.html.</p>';
+            }
+          }
+
+          function render() {
+            const m = $("main");
+            if (!S.pub) return;
+            if (!S.pub.configured) {
+              m.innerHTML = `<h1>Create your group</h1><p class="mut">First-time setup (admin only).</p><div class="card">
+        <input id="g" placeholder="Group name, e.g. Ranna Baj"><input id="ap" type="password" placeholder="Admin password (8+ characters)">
+        <div class="err">${esc(
+          S.err
+        )}</div><button onclick="setup()" style="width:100%">Create</button></div>`;
+              return;
+            }
+            if (!S.d) {
+              m.innerHTML = `<h1>${esc(
+                S.pub.group
+              )}</h1><p class="mut">Choose your name to continue.</p><div class="card">
+        <select id="who" onchange="hint()">${S.pub.people
+          .map(
+            (p) =>
+              `<option value="${p.id}" data-c="${p.claimed ? 1 : 0}">${esc(
+                p.name
+              )}</option>`
+          )
+          .join("")}<option value="a">Admin</option></select>
+        <input id="pw" type="password" inputmode="numeric" autocomplete="off"><div id="hint" class="mut" style="margin:-6px 0 10px"></div>
+        <div class="err">${esc(
+          S.err
+        )}</div><button onclick="enter()" style="width:100%">Continue</button></div>`;
+              if (S.sel) $("#who").value = S.sel;
+              hint();
+              return;
+            }
+            const tabs = [
+              ["add", "Add"],
+              ["list", "Expenses"],
+              ["settle", "Settle"],
+              ["log", "History"],
+            ];
+            if (S.d.me.admin) tabs.push(["admin", "Admin"]);
+            m.innerHTML = `<div class="row" style="margin-bottom:8px"><div><h1>${esc(
+              S.d.group
+            )}</h1><span class="mut">${esc(S.d.me.name)}${
+              S.d.me.admin ? " · admin" : ""
+            }</span></div>
+       <button class="ghost sm" style="flex:none;margin:0" onclick="out()">Log out</button></div>${{
+         add: addView,
+         list: listView,
+         settle: settleView,
+         log: logView,
+         admin: adminView,
+       }[S.tab]()}
+       <nav>${tabs
+         .map(
+           (t) =>
+             `<button class="${S.tab === t[0] ? "on" : ""}" onclick="S.tab='${
+               t[0]
+             }';S.err='';render()">${t[1]}</button>`
+         )
+         .join("")}</nav>`;
+          }
+
+          function hint() {
+            const s = $("#who"),
+              o = s.options[s.selectedIndex],
+              pw = $("#pw");
+            if (s.value === "a") {
+              pw.placeholder = "Admin password";
+              pw.removeAttribute("maxlength");
+              pw.inputMode = "text";
+              $("#hint").textContent = "";
+            } else {
+              pw.placeholder = "5-digit password";
+              pw.maxLength = 5;
+              pw.inputMode = "numeric";
+              $("#hint").textContent =
+                o.dataset.c === "1"
+                  ? ""
+                  : "First time here: choose a 5-digit password. You will use it every time.";
+            }
+          }
+          async function setup() {
+            try {
+              S.tok = await rpc("setup", { g: $("#g").value, apw: $("#ap").value });
+              localStorage.rb_tok = S.tok;
+              S.pub = await rpc("app_state");
+              S.tab = "admin";
+              S.err = "";
+              await load();
+            } catch (e) {
+              S.err = e.message;
+              render();
+            }
+          }
+          async function enter() {
+            const v = $("#who").value;
+            S.sel = v;
+            S.err = "";
+            try {
+              const t = await rpc("enter", {
+                p: v === "a" ? null : +v,
+                pw: $("#pw").value,
+                adm: v === "a",
+              });
+              if (t.startsWith("ERR:")) throw new Error(t.slice(4));
+              S.tok = t;
+              localStorage.rb_tok = t;
+              S.tab = "add";
+              await load();
+            } catch (e) {
+              S.err = e.message;
+              render();
+            }
+          }
+
+          function addView() {
+            const d = S.d,
+              act = d.people.filter((p) => p.active),
+              cats = [
+                "Food",
+                "Groceries",
+                "Travel",
+                "Transport",
+                "Snacks",
+                "Utilities",
+                "Household",
+                "Other",
+              ];
+            const chip = (p, fn, on) =>
+              `<button class="chip ${on ? "on" : ""}" onclick="${fn}(this,${
+                p.id
+              })">${esc(p.name)}</button>`;
+            return `${
+              d.rates.length
+                ? ""
+                : '<div class="note">No exchange rate yet. The admin must add one first (Admin tab).</div>'
+            }
+      <div class="card"><label class="mut">Item</label><input id="item" placeholder="e.g. Rice, oil">
+      <div class="row"><div><label class="mut">Cost (RMB)</label><input id="rmb" type="number" inputmode="decimal" step="0.01"></div>
+      <div><label class="mut">Date</label><input id="dt" type="date" value="${today()}"></div></div>
+      <label class="mut">Category</label><select id="cat">${cats
+        .map((c) => `<option>${c}</option>`)
+        .join("")}</select>
+      <label class="mut">Shared by</label><div class="chips">${act
+        .map((p) => chip(p, "tog", S.sp.includes(p.id)))
+        .join("")}</div>
+      <label class="mut">Paid by</label><div class="chips">${act
+        .map((p) => chip(p, "pay", S.paid === p.id))
+        .join("")}</div>
+      <div class="err" id="err">${esc(
+        S.err
+      )}</div><button onclick="save()" style="width:100%">Save expense</button></div>`;
+          }
+          function tog(el, id) {
+            S.sp = S.sp.includes(id) ? S.sp.filter((x) => x !== id) : [...S.sp, id];
+            el.classList.toggle("on");
+          }
+          function pay(el, id) {
+            S.paid = id;
+            [...el.parentNode.children].forEach((x) => x.classList.remove("on"));
+            el.classList.add("on");
+          }
+          async function save() {
+            const item = $("#item").value.trim(),
+              rmb = parseFloat($("#rmb").value),
+              dt = $("#dt").value,
+              e = $("#err");
+            e.textContent = "";
+            if (!item || !(rmb > 0) || !dt || !S.paid || !S.sp.length) {
+              e.textContent = "Fill the item, cost, who shared and who paid.";
+              return;
+            }
+            if (!confirm("Save this expense?")) return;
+            try {
+              await rpc("add_expense", {
+                p_tok: S.tok,
+                p_d: dt,
+                p_item: item,
+                p_cat: $("#cat").value,
+                p_rmb: rmb,
+                p_paid: S.paid,
+                p_split: S.sp,
+              });
+              S.tab = "list";
+              await load();
+            } catch (x) {
+              e.textContent = x.message;
+            }
+          }
+
+          function listView() {
+            const d = S.d;
+            if (!d.expenses.length) return '<p class="mut">No expenses yet.</p>';
+            let h = "",
+              prev = null,
+              last = "";
+            d.expenses.forEach((e) => {
+              if (prev !== null && e.rate !== prev)
+                h += `<div class="note">From here down: 1 RMB = ${e.rate} BDT</div>`;
+              prev = e.rate;
+              if (e.d !== last) {
+                h += `<h2>${fd(e.d)}</h2>`;
+                last = e.d;
+              }
+              h += `<div class="card"><div class="row"><b>${esc(
+                e.item
+              )}</b><b>¥${c2(Math.round(e.rmb * 100))}</b></div>
+        <div class="row mut"><span>${esc(e.cat)} · paid by ${esc(
+                nm(e.paid_by)
+              )}</span><span>${c2(Math.round(e.bdt * 100))} BDT</span></div>
+        <div class="mut">Shared by ${e.split
+          .map((i) => esc(nm(i)))
+          .join(", ")}</div>
+        ${
+          d.me.admin || e.by === d.me.name
+            ? `<button class="ghost sm" onclick="rm(${e.id})">Remove</button>`
+            : ""
+        }</div>`;
+            });
+            return h;
+          }
+          async function rm(id) {
+            if (!confirm("Remove this expense?")) return;
+            try {
+              await rpc("remove_expense", { p_tok: S.tok, p_id: id });
+              await load();
+            } catch (e) {
+              alert(e.message);
+            }
+          }
+
+          function settleView() {
+            const ids = S.d.people.map((p) => p.id),
+              paid = {},
+              share = {},
+              ow = {};
+            ids.forEach((a) => {
+              paid[a] = 0;
+              share[a] = 0;
+              ow[a] = {};
+              ids.forEach((b) => (ow[a][b] = 0));
+            });
+            S.d.expenses.forEach((e) => {
+              const c = Math.round(e.rmb * 100),
+                s = [...e.split].sort((x, y) => x - y),
+                q = Math.floor(c / s.length),
+                r = c - q * s.length;
+              paid[e.paid_by] += c;
+              s.forEach((id, i) => {
+                const v = q + (i < r ? 1 : 0);
+                share[id] += v;
+                if (id !== e.paid_by) ow[id][e.paid_by] += v;
+              });
+            });
+            let h = '<h2>Balances</h2><div class="card">';
+            ids.forEach((i) => {
+              const v = paid[i] - share[i];
+              h += `<div class="row"><span>${esc(nm(i))}</span><b class="${
+                v >= 0 ? "pos" : "neg"
+              }">${v >= 0 ? "+" : "−"}¥${c2(Math.abs(v))}</b></div>`;
+            });
+            h +=
+              '</div><p class="mut">+ gets money back · − needs to pay. All entries so far.</p><h2>Who pays whom</h2><div class="card">';
+            let any = false;
+            ids.forEach((a) =>
+              ids.forEach((b) => {
+                const v = ow[a][b] - ow[b][a];
+                if (v > 0) {
+                  any = true;
+                  h += `<div class="row"><span>${esc(nm(a))} → ${esc(
+                    nm(b)
+                  )}</span><b>¥${c2(v)}</b></div>`;
+                }
+              })
+            );
+            return (
+              h + (any ? "" : '<span class="mut">All settled.</span>') + "</div>"
+            );
+          }
+
+          function logView() {
+            return `<div class="card">${
+              S.d.log
+                .map(
+                  (l) =>
+                    `<div style="margin:6px 0"><span class="mut">${new Date(
+                      l.at
+                    ).toLocaleString("en", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}</span><br><b>${esc(l.who)}</b> ${esc(l.act)} ${esc(
+                      l.info || ""
+                    )}</div>`
+                )
+                .join("") || '<span class="mut">Nothing yet.</span>'
+            }</div>`;
+          }
+
+          function adminView() {
+            const d = S.d;
+            return `<h2>People</h2><div class="card">${d.people
+              .map(
+                (p) => `<div class="row" style="margin-bottom:6px"><span>${esc(
+                  p.name
+                )} <span class="mut">${
+                  p.claimed ? "" : "· not joined yet"
+                }</span></span>
+      ${
+        p.claimed
+          ? `<button class="ghost sm" style="margin:0" onclick="adm('reset',${p.id},'Reset this password? They will choose a new one.')">Reset password</button>`
+          : ""
+      }</div>`
+              )
+              .join("")}
+      <input id="np" placeholder="New person's name"><button onclick="adm('person',$('#np').value.trim())">Add person</button></div>
+      <h2>Exchange rate (BDT for 1 RMB)</h2><div class="card">${
+        d.rates
+          .map(
+            (r) => `<div class="row" style="margin-bottom:6px"><span>${
+              r.rate
+            } from ${fd(r.eff)}</span>
+      <button class="ghost sm" style="margin:0" onclick="adm('delrate',${
+        r.id
+      },'Delete this rate? Saved entries keep the rate they were saved with.')">Delete</button></div>`
+          )
+          .join("") || '<p class="mut">None yet.</p>'
+      }
+      <div class="row"><div><input id="rt" type="number" step="0.01" placeholder="19.55"></div><div><input id="re" type="date" value="${today()}"></div></div>
+      <button onclick="adm('rate',$('#rt').value,'',$('#re').value)">Add rate</button></div>
+      <p class="mut">A new rate only applies to entries dated on or after its start date. Older entries never change.</p>`;
+          }
+          async function adm(op, a, msg, b) {
+            if (!a) return;
+            if (msg && !confirm(msg)) return;
+            try {
+              await rpc("admin_op", {
+                p_tok: S.tok,
+                p_op: op,
+                p_a: String(a),
+                p_b: b || "",
+              });
+              await load();
+            } catch (e) {
+              alert(e.message);
+            }
+          }
+          init();
+    </script>
+  </body>
+</html>
